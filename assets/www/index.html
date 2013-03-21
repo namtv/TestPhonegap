@@ -1,0 +1,128 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta name="viewport" content="width=320; user-scalable=no" />
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <title>Get content from a link</title>
+
+	  <script type="text/javascript" charset="utf-8" src="cordova-2.2.0.js"></script>
+	  <script type="text/javascript" src="jquery.mobile/jquery-1.8.2.min.js"></script>
+	  <script type="text/javascript" charset="utf-8" src="jquery.xdomainajax.mod.js"></script>
+	  <script type="text/javascript" charset="utf-8" src="xml2json.js"></script>
+	  <script type="text/javascript" src="jquery.mobile/jquery.mobile-1.2.0.min.js"></script>
+<link rel="stylesheet" type="text/css" href="jquery.mobile/jquery.mobile-1.2.0.css" />
+<link rel="stylesheet" type="text/css" href="jquery.mobile/jquery.mobile.structure-1.2.0.css" />
+<link rel="stylesheet" type="text/css" href="jquery.mobile/jquery.mobile.theme-1.2.0.css" />
+	  <script type="text/javascript" charset="utf-8">
+      
+        var onDeviceReady = function() {
+        	$.mobile.showPageLoadingMsg(); // Jquery mobile - hiện lên 1 biểu tượng vòng quay, để thông báo đang load dữ liệu
+        	  var request = $.ajax({
+        	    // để thực hiện lấy dữ liệu từ 1 file .xml từ 1 doimain khác, cần sử dụng plugin xdomainajax.js
+        	    url: "http://trungpolit.freevnn.com/phonegap/xml/links.xml",
+        	    dataType: "xml",
+        	    type: "GET",
+        	    success: function (res) {
+        	      //console.log(res);
+        	      var xml = res.responseText;
+        	      //console.log(xml);
+        	      // phương thức $.xml2json được lấy từ plugin xml2json.js
+        	      // phương thức này biến đổi chuỗi string được lấy ra từ file .xml thành 1 đối tượng JSON
+        	      var json = $.xml2json(xml);
+        	      //console.log(json);
+        	      for (var i = 0; i < json.item.length; i++) {
+        	        $('#result').append('<li><a href="#">' + json.item[i].name + '</a></li>'); // thêm mới dữ liệu vào trong DOM(cụ thể trong 1 listview của Jquery mobile)
+        	        /* thực hiện ghi các thông tin cần thiết khác như link và id lấy từ file . xml 
+        			vào trong phần tử  listview mới thêm vào ở trên */
+        	        $('#result li a:eq(' + i + ')').data({
+        	          'link': json.item[i].link,
+        	          'id': json.item[i].id
+        	        });
+        	        /* ************************************************************************************** */
+        	      }
+        	      $('#result').listview('refresh'); // cập nhật lại phần tử listview trong Jquery mobile, khi dữ liệu được thêm mới vào trong DOM mà trước đó nó không hề tồn tại trong DOM
+        	      $.mobile.hidePageLoadingMsg(); // Jquery mobile - ẩn đi biểu tượng thông báo load dữ liệu
+        	    }
+        	  })
+        	    .error(function () {
+        	    alert('lỗi AJAX');
+        	  })
+        	    .success(function (res) {
+
+        	  });
+        	  // Sự kiện khi ấn vào 1 link trong listview thì nó sẽ nạp vào 1 trang page mới và chuyển tiếp tới trang này
+        	  $('#result').on('click', 'li a', function () {
+        	    //alert($(this).data('link'));
+        	    var url = $(this).data('link');
+        	    var id = $(this).data('id');
+        	    var title = $(this).text();
+
+        	    $.mobile.showPageLoadingMsg(); // Jquery mobile - hiện lên 1 biểu tượng vòng quay, để thông báo đang load dữ liệu
+        	    var request = $.ajax({
+        	      url: url,
+        	      type: "GET",
+        	      success: function (res) {
+        	        console.log(res);
+        	        html = $(res.responseText).find('div.fon34').html(); // lưu ý div.fon34 là 1 div mà trong toàn bộ khối HTML được tải về từ 1 link, có chứa dữ liệu cần thiết, tránh nạp thừa dữ liệu
+        	        console.log(html);
+        	        /* Tạo ra 1 trang page mới và sẽ nạp nó vào trong DOM, khi lấy xong dữ liệu từ 1 đường dẫn link trong file .xml */
+        	        var newpage = '<div data-role="page" id="' + id + '" data-fullscreen="true">\
+        	                         <div data-role="header" data-position="fixed" >\
+        	                          <a href="#page" data-role="button" data-icon="home" data-iconpos="notext" data-transition="slide" data-direction="reverse" ></a> \
+        	                          <h1>' + title + '</h1>\
+        	                         </div>\
+        	                         <div data-role="content">' + html + '\
+        	                         </div>\
+        	                         <div data-role="footer" data-position="fixed">\
+        	                           <h4>Phonegap.vn</h4>\
+        	                         </div>\
+        	                       </div>';
+        	        // kiểm tra xem trang page đã được nạp vào hay chưa - phòng tránh nạp lại trang page nhiều lần			   
+        	        if ($("#" + id).length <= 0) {
+        	          $('body').append(newpage); // thực hiện nạp 1 trang page mới vào trong DOM
+        	        }
+        	        /* *************************************************************************************************** */
+        	        $(document).off('pageinit'); // Tắt sự kiện pageinit không cho nó kích hoạt lại, tránh thêm thừa dữ liệu khi chuyển tiếp về trang chủ
+        	        /* thực hiện chuyển trang */
+        	        $.mobile.changePage($("#" + id), {
+        	          transition: 'slide'
+        	        });
+        	        /* ************************* */
+        	        $.mobile.hidePageLoadingMsg(); // Jquery mobile - ẩn đi biểu tượng thông báo load dữ liệu
+        	      }
+        	    })
+        	      .error(function () {
+        	      alert('lỗi AJAX');
+        	    })
+        	      .success(function (res) {
+
+        	    });
+
+        	  });
+        };
+
+        function init() {
+            document.addEventListener("deviceready", onDeviceReady, true);
+        }   
+</script>  
+
+  </head>
+  <body onload="init();" id="stage" class="theme">
+    <div data-role="page" id="page">
+  <div data-role="header" data-position="fixed" >
+    <h1>Get content from a link</h1>
+  </div>
+  <div data-role="content"> 
+    <!-- phần tử listview trong Jquery mobile -->
+    <ul data-role="listview" id="result">
+    </ul>
+    <!-- **************************************** --> 
+    
+  </div>
+  <div data-role="footer" data-position="fixed">
+    <h4>Phonegap.vn</h4>
+  </div>
+</div>
+
+  </body>
+</html>
